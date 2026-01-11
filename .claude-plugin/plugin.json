@@ -1,6 +1,6 @@
 {
   "name": "publii-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP Server für Publii CMS - ermöglicht CRUD-Operationen auf Posts, Pages, Tags und Authors direkt aus Claude Code",
   "author": {
     "name": "Valgard"

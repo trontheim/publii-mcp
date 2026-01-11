@@ -1,6 +1,6 @@
 # publii-mcp
 
-[![Version](https://img.shields.io/badge/version-1.0.0-green)](https://github.com/trontheim/publii-mcp/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1-green)](https://github.com/trontheim/publii-mcp/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-≥3.10-blue)](https://www.python.org/)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet)](https://github.com/anthropics/claude-code)
