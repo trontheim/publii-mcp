@@ -282,3 +282,91 @@ class TestPubliiDB:
         conn.close()
 
         assert count == 0
+
+
+class TestPubliiDBPages:
+    """Tests fur Page-Operationen."""
+
+    @pytest.fixture
+    def temp_publii_dir(self, tmp_path: Path) -> Path:
+        """Erstellt temporares Publii-Verzeichnis mit Test-Site."""
+        sites_dir = tmp_path / "sites" / "test-site" / "input"
+        sites_dir.mkdir(parents=True)
+
+        db_path = sites_dir / "db.sqlite"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.executescript('''
+            CREATE TABLE posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT, authors TEXT, slug TEXT, text TEXT,
+                featured_image_id INTEGER, created_at DATETIME,
+                modified_at DATETIME, status TEXT, template TEXT
+            );
+            CREATE TABLE posts_additional_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER, key TEXT, value TEXT
+            );
+            CREATE TABLE posts_images (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER, url TEXT, title TEXT, caption TEXT, additional_data TEXT
+            );
+            CREATE TABLE tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT, slug TEXT, description TEXT, additional_data TEXT
+            );
+            CREATE TABLE posts_tags (tag_id INTEGER, post_id INTEGER, PRIMARY KEY (tag_id, post_id));
+            CREATE TABLE authors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT, username TEXT, password TEXT, config TEXT, additional_data TEXT
+            );
+            INSERT INTO authors (id, name, username) VALUES (1, 'Admin', 'admin');
+        ''')
+        conn.commit()
+        conn.close()
+
+        return tmp_path
+
+    @pytest.fixture
+    def db_with_pages(self, temp_publii_dir: Path) -> "PubliiDB":
+        """PubliiDB mit Test-Pages."""
+        from publii_mcp.db import PubliiDB
+
+        db_path = temp_publii_dir / "sites" / "test-site" / "input" / "db.sqlite"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.executescript('''
+            INSERT INTO posts (id, title, authors, slug, text, status, created_at, modified_at)
+            VALUES
+                (10, 'Uber uns', '1', 'ueber-uns', '<p>Uber uns</p>', 'published,is-page', 1704067200000, 1704067200000),
+                (11, 'Impressum', '1', 'impressum', '<p>Impressum</p>', 'draft,is-page', 1704153600000, 1704153600000);
+        ''')
+        conn.commit()
+        conn.close()
+
+        return PubliiDB(data_dir=temp_publii_dir, default_site="test-site")
+
+    def test_list_pages_returns_only_pages(self, db_with_pages) -> None:
+        """list_pages gibt nur Pages zuruck."""
+        pages = db_with_pages.list_pages()
+
+        assert len(pages) == 2
+        assert all("is-page" in p.get("status", "") or p.get("is_page") for p in pages)
+
+    def test_get_page_returns_page(self, db_with_pages) -> None:
+        """get_page gibt Page mit Content zuruck."""
+        page = db_with_pages.get_page(10)
+
+        assert page["title"] == "Uber uns"
+        assert page["content"] == "<p>Uber uns</p>"
+
+    def test_create_page_adds_is_page_suffix(self, db_with_pages) -> None:
+        """create_page fugt ,is-page zum Status hinzu."""
+        result = db_with_pages.create_page(
+            title="Kontakt",
+            content="<p>Kontakt</p>",
+        )
+
+        assert ",is-page" in result["status"]

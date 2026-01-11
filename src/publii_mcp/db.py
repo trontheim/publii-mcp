@@ -430,3 +430,213 @@ class PubliiDB:
         conn.close()
 
         return {"deleted": True, "id": post_id, "title": post["title"]}
+
+    # === Pages ===
+
+    def list_pages(
+        self,
+        site: str | None = None,
+        status: str = "all",
+        limit: int = 20,
+    ) -> list[dict]:
+        """Listet statische Seiten einer Site.
+
+        Args:
+            site: Site-Name.
+            status: Filter: "all", "published", "draft".
+            limit: Maximale Anzahl.
+
+        Returns:
+            Liste von Page-Dicts.
+        """
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        query = "SELECT * FROM posts WHERE status LIKE '%,is-page%'"
+        params: list = []
+
+        if status == "published":
+            query += " AND status = 'published,is-page'"
+        elif status == "draft":
+            query += " AND status = 'draft,is-page'"
+
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [self._row_to_page_dict(row) for row in rows]
+
+    def _row_to_page_dict(self, row: sqlite3.Row) -> dict:
+        """Konvertiert DB-Row zu Page-Dict."""
+        return {
+            "id": row["id"],
+            "title": row["title"],
+            "slug": row["slug"],
+            "status": row["status"],
+            "is_page": True,
+            "author_id": int(row["authors"]) if row["authors"] else None,
+            "created_at": self._ms_to_iso(row["created_at"]),
+            "modified_at": self._ms_to_iso(row["modified_at"]),
+        }
+
+    def get_page(self, page_id: int, site: str | None = None) -> dict:
+        """Holt eine statische Seite mit allen Details.
+
+        Args:
+            page_id: ID der Page.
+            site: Site-Name.
+
+        Returns:
+            Page-Dict mit vollem Content.
+
+        Raises:
+            ValueError: Wenn Page nicht existiert.
+        """
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT * FROM posts WHERE id = ? AND status LIKE '%,is-page%'",
+            (page_id,)
+        )
+        row = cursor.fetchone()
+        conn.close()
+
+        if row is None:
+            raise ValueError(f"Page mit ID {page_id} nicht gefunden")
+
+        base = self._row_to_page_dict(row)
+        base["content"] = row["text"]
+        base["featured_image_id"] = row["featured_image_id"]
+        base["template"] = row["template"]
+        return base
+
+    def create_page(
+        self,
+        title: str,
+        content: str,
+        site: str | None = None,
+        slug: str | None = None,
+        status: str = "draft",
+        author_id: int = 1,
+    ) -> dict:
+        """Erstellt eine neue statische Seite.
+
+        Args:
+            title: Seiten-Titel.
+            content: HTML-Inhalt.
+            site: Site-Name.
+            slug: URL-Slug (auto-generiert wenn None).
+            status: "draft" oder "published".
+            author_id: ID des Autors.
+
+        Returns:
+            Dict mit erstellter Page.
+        """
+        if not self.validate_author_exists(author_id, site):
+            raise ValueError(f"Author mit ID {author_id} nicht gefunden")
+
+        if status not in ("draft", "published"):
+            raise ValueError(f"Ungultiger Status: {status}")
+
+        # Status mit ,is-page Suffix
+        page_status = f"{status},is-page"
+        page_slug = slug or self._generate_slug(title)
+        now_ms = int(time.time() * 1000)
+
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO posts (title, authors, slug, text, status, created_at, modified_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (title, str(author_id), page_slug, content, page_status, now_ms, now_ms)
+        )
+        page_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        self._create_additional_data(page_id, is_page=True, site=site)
+
+        return {
+            "id": page_id,
+            "title": title,
+            "slug": page_slug,
+            "status": page_status,
+            "is_page": True,
+            "author_id": author_id,
+            "created_at": self._ms_to_iso(now_ms),
+        }
+
+    def update_page(
+        self,
+        page_id: int,
+        site: str | None = None,
+        title: str | None = None,
+        content: str | None = None,
+        status: str | None = None,
+    ) -> dict:
+        """Aktualisiert eine statische Seite."""
+        self.get_page(page_id, site)
+
+        if status is not None:
+            if status not in ("draft", "published"):
+                raise ValueError(f"Ungultiger Status: {status}")
+            status = f"{status},is-page"
+
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        updates = []
+        params = []
+
+        if title is not None:
+            updates.append("title = ?")
+            params.append(title)
+        if content is not None:
+            updates.append("text = ?")
+            params.append(content)
+        if status is not None:
+            updates.append("status = ?")
+            params.append(status)
+
+        if updates:
+            updates.append("modified_at = ?")
+            params.append(int(time.time() * 1000))
+            params.append(page_id)
+            cursor.execute(
+                f"UPDATE posts SET {', '.join(updates)} WHERE id = ?",
+                params
+            )
+            conn.commit()
+
+        conn.close()
+        return self.get_page(page_id, site)
+
+    def delete_page(self, page_id: int, site: str | None = None) -> dict:
+        """Loscht eine statische Seite."""
+        page = self.get_page(page_id, site)
+
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM posts_additional_data WHERE post_id = ?", (page_id,))
+        cursor.execute("DELETE FROM posts_images WHERE post_id = ?", (page_id,))
+        cursor.execute("DELETE FROM posts WHERE id = ?", (page_id,))
+
+        conn.commit()
+        conn.close()
+
+        return {"deleted": True, "id": page_id, "title": page["title"]}
