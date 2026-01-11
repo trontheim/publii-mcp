@@ -640,3 +640,60 @@ class PubliiDB:
         conn.close()
 
         return {"deleted": True, "id": page_id, "title": page["title"]}
+
+    # === Tags & Authors ===
+
+    def list_tags(self, site: str | None = None) -> list[dict]:
+        """Listet alle Tags einer Site.
+
+        Args:
+            site: Site-Name.
+
+        Returns:
+            Liste von Tag-Dicts.
+        """
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id, name, slug, description FROM tags ORDER BY name")
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "slug": row["slug"],
+                "description": row["description"],
+            }
+            for row in rows
+        ]
+
+    def list_authors(self, site: str | None = None) -> list[dict]:
+        """Listet alle Autoren einer Site.
+
+        Args:
+            site: Site-Name.
+
+        Returns:
+            Liste von Author-Dicts.
+        """
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id, name, username FROM authors ORDER BY id")
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "username": row["username"],
+            }
+            for row in rows
+        ]

@@ -370,3 +370,71 @@ class TestPubliiDBPages:
         )
 
         assert ",is-page" in result["status"]
+
+
+class TestPubliiDBTagsAuthors:
+    """Tests fur Tags und Authors."""
+
+    @pytest.fixture
+    def temp_publii_dir(self, tmp_path: Path) -> Path:
+        """Erstellt temporares Publii-Verzeichnis."""
+        sites_dir = tmp_path / "sites" / "test-site" / "input"
+        sites_dir.mkdir(parents=True)
+
+        db_path = sites_dir / "db.sqlite"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.executescript('''
+            CREATE TABLE posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT, authors TEXT, slug TEXT, text TEXT,
+                featured_image_id INTEGER, created_at DATETIME,
+                modified_at DATETIME, status TEXT, template TEXT
+            );
+            CREATE TABLE posts_additional_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER, key TEXT, value TEXT
+            );
+            CREATE TABLE posts_images (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER, url TEXT, title TEXT, caption TEXT, additional_data TEXT
+            );
+            CREATE TABLE tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT, slug TEXT, description TEXT, additional_data TEXT
+            );
+            CREATE TABLE posts_tags (tag_id INTEGER, post_id INTEGER, PRIMARY KEY (tag_id, post_id));
+            CREATE TABLE authors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT, username TEXT, password TEXT, config TEXT, additional_data TEXT
+            );
+
+            INSERT INTO authors (id, name, username) VALUES (1, 'Admin', 'admin');
+            INSERT INTO authors (id, name, username) VALUES (2, 'Max Mustermann', 'max');
+            INSERT INTO tags (id, name, slug) VALUES (1, 'Sport', 'sport');
+            INSERT INTO tags (id, name, slug) VALUES (2, 'Verein', 'verein');
+        ''')
+        conn.commit()
+        conn.close()
+
+        return tmp_path
+
+    def test_list_tags(self, temp_publii_dir: Path) -> None:
+        """list_tags gibt alle Tags zuruck."""
+        from publii_mcp.db import PubliiDB
+
+        db = PubliiDB(data_dir=temp_publii_dir, default_site="test-site")
+        tags = db.list_tags()
+
+        assert len(tags) == 2
+        assert tags[0]["name"] == "Sport"
+
+    def test_list_authors(self, temp_publii_dir: Path) -> None:
+        """list_authors gibt alle Autoren zuruck."""
+        from publii_mcp.db import PubliiDB
+
+        db = PubliiDB(data_dir=temp_publii_dir, default_site="test-site")
+        authors = db.list_authors()
+
+        assert len(authors) == 2
+        assert authors[0]["name"] == "Admin"
