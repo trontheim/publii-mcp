@@ -69,10 +69,12 @@ class PubliiDB:
         for site_path in sorted(sites_dir.iterdir()):
             if site_path.is_dir():
                 db_exists = (site_path / "input" / "db.sqlite").exists()
-                sites.append({
-                    "name": site_path.name,
-                    "has_db": db_exists,
-                })
+                sites.append(
+                    {
+                        "name": site_path.name,
+                        "has_db": db_exists,
+                    }
+                )
 
         return sites
 
@@ -153,8 +155,7 @@ class PubliiDB:
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT * FROM posts WHERE id = ? AND status NOT LIKE '%,is-page%'",
-            (post_id,)
+            "SELECT * FROM posts WHERE id = ? AND status NOT LIKE '%,is-page%'", (post_id,)
         )
         row = cursor.fetchone()
         conn.close()
@@ -181,23 +182,27 @@ class PubliiDB:
         """
         # Umlaute konvertieren
         umlaut_map = {
-            'ä': 'ae', 'ö': 'oe', 'ü': 'ue',
-            'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue',
-            'ß': 'ss',
+            "ä": "ae",
+            "ö": "oe",
+            "ü": "ue",
+            "Ä": "Ae",
+            "Ö": "Oe",
+            "Ü": "Ue",
+            "ß": "ss",
         }
         slug = title
         for umlaut, replacement in umlaut_map.items():
             slug = slug.replace(umlaut, replacement)
 
         # Auf ASCII normalisieren
-        slug = unicodedata.normalize('NFKD', slug)
-        slug = slug.encode('ascii', 'ignore').decode('ascii')
+        slug = unicodedata.normalize("NFKD", slug)
+        slug = slug.encode("ascii", "ignore").decode("ascii")
 
         # Nur alphanumerisch und Leerzeichen behalten
-        slug = re.sub(r'[^\w\s-]', '', slug.lower())
+        slug = re.sub(r"[^\w\s-]", "", slug.lower())
 
         # Leerzeichen zu Bindestrichen
-        slug = re.sub(r'[-\s]+', '-', slug).strip('-')
+        slug = re.sub(r"[-\s]+", "-", slug).strip("-")
 
         return slug
 
@@ -233,7 +238,7 @@ class PubliiDB:
         }
         cursor.execute(
             "INSERT INTO posts_additional_data (post_id, key, value) VALUES (?, ?, ?)",
-            (post_id, "_core", json.dumps(core_data))
+            (post_id, "_core", json.dumps(core_data)),
         )
 
         # View Settings
@@ -264,7 +269,7 @@ class PubliiDB:
 
         cursor.execute(
             "INSERT INTO posts_additional_data (post_id, key, value) VALUES (?, ?, ?)",
-            (post_id, key, json.dumps(view_settings))
+            (post_id, key, json.dumps(view_settings)),
         )
 
         conn.commit()
@@ -317,7 +322,7 @@ class PubliiDB:
             INSERT INTO posts (title, authors, slug, text, status, created_at, modified_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (title, str(author_id), post_slug, content, status, now_ms, now_ms)
+            (title, str(author_id), post_slug, content, status, now_ms, now_ms),
         )
         post_id = cursor.lastrowid
         conn.commit()
@@ -388,10 +393,7 @@ class PubliiDB:
             params.append(int(time.time() * 1000))
             params.append(post_id)
 
-            cursor.execute(
-                f"UPDATE posts SET {', '.join(updates)} WHERE id = ?",
-                params
-            )
+            cursor.execute(f"UPDATE posts SET {', '.join(updates)} WHERE id = ?", params)
             conn.commit()
 
         conn.close()
@@ -502,10 +504,7 @@ class PubliiDB:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT * FROM posts WHERE id = ? AND status LIKE '%,is-page%'",
-            (page_id,)
-        )
+        cursor.execute("SELECT * FROM posts WHERE id = ? AND status LIKE '%,is-page%'", (page_id,))
         row = cursor.fetchone()
         conn.close()
 
@@ -560,7 +559,7 @@ class PubliiDB:
             INSERT INTO posts (title, authors, slug, text, status, created_at, modified_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (title, str(author_id), page_slug, content, page_status, now_ms, now_ms)
+            (title, str(author_id), page_slug, content, page_status, now_ms, now_ms),
         )
         page_id = cursor.lastrowid
         conn.commit()
@@ -615,10 +614,7 @@ class PubliiDB:
             updates.append("modified_at = ?")
             params.append(int(time.time() * 1000))
             params.append(page_id)
-            cursor.execute(
-                f"UPDATE posts SET {', '.join(updates)} WHERE id = ?",
-                params
-            )
+            cursor.execute(f"UPDATE posts SET {', '.join(updates)} WHERE id = ?", params)
             conn.commit()
 
         conn.close()

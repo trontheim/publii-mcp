@@ -20,7 +20,7 @@ class TestPubliiDB:
         cursor = conn.cursor()
 
         # Publii Schema erstellen
-        cursor.executescript('''
+        cursor.executescript("""
             CREATE TABLE posts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT,
@@ -74,7 +74,7 @@ class TestPubliiDB:
             );
 
             INSERT INTO authors (id, name, username) VALUES (1, 'Admin', 'admin');
-        ''')
+        """)
         conn.commit()
         conn.close()
 
@@ -128,7 +128,7 @@ class TestPubliiDB:
         assert no_db_site["has_db"] is False
 
     @pytest.fixture
-    def db_with_posts(self, temp_publii_dir: Path) -> "PubliiDB":
+    def db_with_posts(self, temp_publii_dir: Path):
         """PubliiDB mit Test-Posts."""
         from publii_mcp.db import PubliiDB
 
@@ -137,13 +137,13 @@ class TestPubliiDB:
         cursor = conn.cursor()
 
         # Test-Posts einfugen (Timestamp in Millisekunden!)
-        cursor.executescript('''
+        cursor.executescript("""
             INSERT INTO posts (id, title, authors, slug, text, status, created_at, modified_at)
             VALUES
                 (1, 'Erster Post', '1', 'erster-post', '<p>Inhalt 1</p>', 'published', 1704067200000, 1704067200000),
                 (2, 'Zweiter Post', '1', 'zweiter-post', '<p>Inhalt 2</p>', 'draft', 1704153600000, 1704153600000),
                 (3, 'Eine Seite', '1', 'eine-seite', '<p>Seite</p>', 'published,is-page', 1704240000000, 1704240000000);
-        ''')
+        """)
         conn.commit()
         conn.close()
 
@@ -228,10 +228,7 @@ class TestPubliiDB:
         db_path = db_with_posts._get_db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT key FROM posts_additional_data WHERE post_id = ?",
-            (result["id"],)
-        )
+        cursor.execute("SELECT key FROM posts_additional_data WHERE post_id = ?", (result["id"],))
         keys = [row[0] for row in cursor.fetchall()]
         conn.close()
 
@@ -274,10 +271,7 @@ class TestPubliiDB:
         db_path = db_with_posts._get_db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT COUNT(*) FROM posts_additional_data WHERE post_id = ?",
-            (post_id,)
-        )
+        cursor.execute("SELECT COUNT(*) FROM posts_additional_data WHERE post_id = ?", (post_id,))
         count = cursor.fetchone()[0]
         conn.close()
 
@@ -297,7 +291,7 @@ class TestPubliiDBPages:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        cursor.executescript('''
+        cursor.executescript("""
             CREATE TABLE posts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT, authors TEXT, slug TEXT, text TEXT,
@@ -322,14 +316,14 @@ class TestPubliiDBPages:
                 name TEXT, username TEXT, password TEXT, config TEXT, additional_data TEXT
             );
             INSERT INTO authors (id, name, username) VALUES (1, 'Admin', 'admin');
-        ''')
+        """)
         conn.commit()
         conn.close()
 
         return tmp_path
 
     @pytest.fixture
-    def db_with_pages(self, temp_publii_dir: Path) -> "PubliiDB":
+    def db_with_pages(self, temp_publii_dir: Path):
         """PubliiDB mit Test-Pages."""
         from publii_mcp.db import PubliiDB
 
@@ -337,12 +331,12 @@ class TestPubliiDBPages:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        cursor.executescript('''
+        cursor.executescript("""
             INSERT INTO posts (id, title, authors, slug, text, status, created_at, modified_at)
             VALUES
                 (10, 'Uber uns', '1', 'ueber-uns', '<p>Uber uns</p>', 'published,is-page', 1704067200000, 1704067200000),
                 (11, 'Impressum', '1', 'impressum', '<p>Impressum</p>', 'draft,is-page', 1704153600000, 1704153600000);
-        ''')
+        """)
         conn.commit()
         conn.close()
 
@@ -385,7 +379,7 @@ class TestPubliiDBTagsAuthors:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        cursor.executescript('''
+        cursor.executescript("""
             CREATE TABLE posts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT, authors TEXT, slug TEXT, text TEXT,
@@ -413,7 +407,7 @@ class TestPubliiDBTagsAuthors:
             INSERT INTO authors (id, name, username) VALUES (2, 'Max Mustermann', 'max');
             INSERT INTO tags (id, name, slug) VALUES (1, 'Sport', 'sport');
             INSERT INTO tags (id, name, slug) VALUES (2, 'Verein', 'verein');
-        ''')
+        """)
         conn.commit()
         conn.close()
 

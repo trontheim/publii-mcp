@@ -28,3 +28,17 @@ dev = [
     "pytest-cov>=4",
     "ruff>=0.8",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]  # Typer verwendet dieses Muster
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # SQL-Strings in Tests duerfen laenger sein
+
+[tool.ruff.format]
+quote-style = "double"
