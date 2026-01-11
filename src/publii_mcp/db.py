@@ -48,3 +48,24 @@ class PubliiDB:
             raise ValueError(f"Site nicht gefunden: {site_name}")
 
         return db_path
+
+    def list_sites(self) -> list[dict]:
+        """Listet alle verfugbaren Publii-Sites.
+
+        Returns:
+            Liste von Dicts mit name und has_db.
+        """
+        sites_dir = self.data_dir / "sites"
+        if not sites_dir.exists():
+            return []
+
+        sites = []
+        for site_path in sorted(sites_dir.iterdir()):
+            if site_path.is_dir():
+                db_exists = (site_path / "input" / "db.sqlite").exists()
+                sites.append({
+                    "name": site_path.name,
+                    "has_db": db_exists,
+                })
+
+        return sites

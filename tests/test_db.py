@@ -95,3 +95,34 @@ class TestPubliiDB:
 
         with pytest.raises(ValueError, match="nicht gefunden"):
             PubliiDB(data_dir=tmp_path / "nonexistent", default_site="test")
+
+    def test_list_sites_returns_available_sites(self, temp_publii_dir: Path) -> None:
+        """list_sites gibt alle Sites mit DB zuruck."""
+        from publii_mcp.db import PubliiDB
+
+        # Zweite Site erstellen
+        site2_dir = temp_publii_dir / "sites" / "second-site" / "input"
+        site2_dir.mkdir(parents=True)
+        conn = sqlite3.connect(site2_dir / "db.sqlite")
+        conn.execute("CREATE TABLE posts (id INTEGER)")
+        conn.close()
+
+        db = PubliiDB(data_dir=temp_publii_dir)
+        sites = db.list_sites()
+
+        assert len(sites) == 2
+        assert {"name": "second-site", "has_db": True} in sites
+        assert {"name": "test-site", "has_db": True} in sites
+
+    def test_list_sites_marks_sites_without_db(self, temp_publii_dir: Path) -> None:
+        """list_sites markiert Sites ohne DB."""
+        from publii_mcp.db import PubliiDB
+
+        # Site ohne DB erstellen
+        (temp_publii_dir / "sites" / "no-db-site" / "input").mkdir(parents=True)
+
+        db = PubliiDB(data_dir=temp_publii_dir)
+        sites = db.list_sites()
+
+        no_db_site = next(s for s in sites if s["name"] == "no-db-site")
+        assert no_db_site["has_db"] is False
