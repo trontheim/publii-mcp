@@ -129,3 +129,41 @@ class PubliiDB:
         if ms is None:
             return None
         return datetime.fromtimestamp(ms / 1000).isoformat()
+
+    def get_post(self, post_id: int, site: str | None = None) -> dict:
+        """Holt einen Blog-Post mit allen Details.
+
+        Args:
+            post_id: ID des Posts.
+            site: Site-Name.
+
+        Returns:
+            Post-Dict mit vollem Content.
+
+        Raises:
+            ValueError: Wenn Post nicht existiert.
+        """
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT * FROM posts WHERE id = ? AND status NOT LIKE '%,is-page%'",
+            (post_id,)
+        )
+        row = cursor.fetchone()
+        conn.close()
+
+        if row is None:
+            raise ValueError(f"Post mit ID {post_id} nicht gefunden")
+
+        return self._row_to_full_post_dict(row)
+
+    def _row_to_full_post_dict(self, row: sqlite3.Row) -> dict:
+        """Konvertiert DB-Row zu vollstandigem Post-Dict."""
+        base = self._row_to_post_dict(row)
+        base["content"] = row["text"]
+        base["featured_image_id"] = row["featured_image_id"]
+        base["template"] = row["template"]
+        return base

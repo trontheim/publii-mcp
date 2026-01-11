@@ -172,3 +172,17 @@ class TestPubliiDB:
         posts = db_with_posts.list_posts(limit=1)
 
         assert len(posts) == 1
+
+    def test_get_post_returns_full_post(self, db_with_posts) -> None:
+        """get_post gibt vollstandigen Post mit Content zuruck."""
+        post = db_with_posts.get_post(1)
+
+        assert post["id"] == 1
+        assert post["title"] == "Erster Post"
+        assert post["content"] == "<p>Inhalt 1</p>"
+        assert post["slug"] == "erster-post"
+
+    def test_get_post_raises_for_nonexistent(self, db_with_posts) -> None:
+        """get_post wirft Error fur nicht existierenden Post."""
+        with pytest.raises(ValueError, match="Post mit ID 999 nicht gefunden"):
+            db_with_posts.get_post(999)
