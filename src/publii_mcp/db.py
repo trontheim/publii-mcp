@@ -334,3 +334,99 @@ class PubliiDB:
             "author_id": author_id,
             "created_at": self._ms_to_iso(now_ms),
         }
+
+    def update_post(
+        self,
+        post_id: int,
+        site: str | None = None,
+        title: str | None = None,
+        content: str | None = None,
+        status: str | None = None,
+    ) -> dict:
+        """Aktualisiert einen Blog-Post.
+
+        Args:
+            post_id: ID des Posts.
+            site: Site-Name.
+            title: Neuer Titel (optional).
+            content: Neuer HTML-Inhalt (optional).
+            status: Neuer Status (optional).
+
+        Returns:
+            Aktualisierter Post.
+
+        Raises:
+            ValueError: Wenn Post nicht existiert.
+        """
+        # Prufung ob Post existiert
+        self.get_post(post_id, site)  # Wirft ValueError wenn nicht gefunden
+
+        if status is not None and status not in ("draft", "published"):
+            raise ValueError(f"Ungultiger Status: {status}")
+
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        updates = []
+        params = []
+
+        if title is not None:
+            updates.append("title = ?")
+            params.append(title)
+
+        if content is not None:
+            updates.append("text = ?")
+            params.append(content)
+
+        if status is not None:
+            updates.append("status = ?")
+            params.append(status)
+
+        if updates:
+            updates.append("modified_at = ?")
+            params.append(int(time.time() * 1000))
+            params.append(post_id)
+
+            cursor.execute(
+                f"UPDATE posts SET {', '.join(updates)} WHERE id = ?",
+                params
+            )
+            conn.commit()
+
+        conn.close()
+
+        return self.get_post(post_id, site)
+
+    def delete_post(self, post_id: int, site: str | None = None) -> dict:
+        """Loscht einen Blog-Post inkl. zugehoriger Daten.
+
+        Args:
+            post_id: ID des Posts.
+            site: Site-Name.
+
+        Returns:
+            Dict mit Bestatigung.
+
+        Raises:
+            ValueError: Wenn Post nicht existiert.
+        """
+        # Prufung ob Post existiert
+        post = self.get_post(post_id, site)
+
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Zugehorige Daten loschen
+        cursor.execute("DELETE FROM posts_additional_data WHERE post_id = ?", (post_id,))
+        cursor.execute("DELETE FROM posts_images WHERE post_id = ?", (post_id,))
+        cursor.execute("DELETE FROM posts_tags WHERE post_id = ?", (post_id,))
+
+        # Post loschen
+        cursor.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+
+        conn.commit()
+        conn.close()
+
+        return {"deleted": True, "id": post_id, "title": post["title"]}

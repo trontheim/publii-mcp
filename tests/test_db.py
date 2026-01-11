@@ -237,3 +237,48 @@ class TestPubliiDB:
 
         assert "_core" in keys
         assert "postViewSettings" in keys
+
+    def test_update_post_updates_fields(self, db_with_posts) -> None:
+        """update_post aktualisiert angegebene Felder."""
+        result = db_with_posts.update_post(
+            post_id=1,
+            title="Aktualisierter Titel",
+        )
+
+        assert result["title"] == "Aktualisierter Titel"
+        # Slug bleibt unverandert
+        assert result["slug"] == "erster-post"
+
+    def test_update_post_raises_for_nonexistent(self, db_with_posts) -> None:
+        """update_post wirft Error fur nicht existierenden Post."""
+        with pytest.raises(ValueError, match="Post mit ID 999 nicht gefunden"):
+            db_with_posts.update_post(post_id=999, title="Test")
+
+    def test_delete_post_removes_post(self, db_with_posts) -> None:
+        """delete_post loscht Post und zugehorige Daten."""
+        db_with_posts.delete_post(1)
+
+        with pytest.raises(ValueError):
+            db_with_posts.get_post(1)
+
+    def test_delete_post_removes_related_data(self, db_with_posts) -> None:
+        """delete_post loscht auch posts_additional_data."""
+        # Erst Post mit additional_data erstellen
+        result = db_with_posts.create_post(title="Temp", content="<p>Temp</p>")
+        post_id = result["id"]
+
+        # Loschen
+        db_with_posts.delete_post(post_id)
+
+        # Prufen dass additional_data geloscht wurde
+        db_path = db_with_posts._get_db_path()
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM posts_additional_data WHERE post_id = ?",
+            (post_id,)
+        )
+        count = cursor.fetchone()[0]
+        conn.close()
+
+        assert count == 0
