@@ -1,6 +1,9 @@
 # publii-mcp
 
-[![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/anthropics/claude-code)
+[![Version](https://img.shields.io/badge/version-1.0.0-green)](https://github.com/trontheim/publii-mcp/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-≥3.10-blue)](https://www.python.org/)
+[![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet)](https://github.com/anthropics/claude-code)
 
 MCP Server für Publii CMS. Ermöglicht Claude Code und anderen MCP-Clients die Interaktion mit Publii-Websites.
 
