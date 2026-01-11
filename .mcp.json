@@ -1,6 +1,10 @@
 {
   "publii": {
-    "command": "uv",
-    "args": ["run", "publii-mcp", "serve"]
+    "command": "bash",
+    "args": [
+      "-c",
+      "cd \"${CLAUDE_PLUGIN_ROOT}\" && exec uv run publii-mcp serve \"$@\"",
+      "--"
+    ]
   }
 }

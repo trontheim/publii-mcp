@@ -4,5 +4,6 @@
   "description": "MCP Server für Publii CMS - ermöglicht CRUD-Operationen auf Posts, Pages, Tags und Authors direkt aus Claude Code",
   "author": {
     "name": "Valgard"
-  }
+  },
+  "mcpServers": "./.mcp.json"
 }
