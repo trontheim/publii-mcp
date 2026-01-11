@@ -10,12 +10,12 @@ Listet alle verfügbaren Publii-Sites auf.
 
 **Parameter:** Keine
 
-**Rückgabe:** `list[str]` - Liste der Site-Namen
+**Rückgabe:** `list[dict]` - Liste von Site-Objekten mit `name` und `has_db`
 
 **Beispiel:**
 ```python
 list_sites()
-# ["blog", "portfolio", "docs"]
+# [{"name": "blog", "has_db": True}, {"name": "portfolio", "has_db": True}]
 ```
 
 ---
@@ -52,7 +52,7 @@ Listet Blog-Posts einer Site auf.
 |------|-----|--------------|---------|--------------|
 | `site` | `str` | Nein | Default-Site | Site-Name |
 | `status` | `str` | Nein | `"all"` | Filter: `"all"`, `"published"`, `"draft"` |
-| `limit` | `int` | Nein | `100` | Maximale Anzahl |
+| `limit` | `int` | Nein | `20` | Maximale Anzahl |
 
 **Rückgabe:** `list[dict]` - Liste von Post-Objekten (ohne Content)
 
@@ -160,7 +160,7 @@ Listet statische Seiten einer Site auf.
 |------|-----|--------------|---------|--------------|
 | `site` | `str` | Nein | Default-Site | Site-Name |
 | `status` | `str` | Nein | `"all"` | Filter: `"all"`, `"published"`, `"draft"` |
-| `limit` | `int` | Nein | `100` | Maximale Anzahl |
+| `limit` | `int` | Nein | `20` | Maximale Anzahl |
 
 **Rückgabe:** `list[dict]` - Liste von Page-Objekten
 

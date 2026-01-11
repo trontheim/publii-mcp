@@ -2,23 +2,14 @@
 
 MCP Server für Publii CMS - ermöglicht CRUD-Operationen auf Publii-Sites via Model Context Protocol.
 
-## Projekt-Befehle
+## Claude Code Plugin
 
-```bash
-# Server starten
-publii-mcp serve --site <site-name>
+Dieses Projekt ist als Claude Code Plugin konfiguriert:
 
-# Sites auflisten
-publii-mcp info
+- `.claude-plugin/plugin.json` - Plugin-Metadaten
+- `.mcp.json` - MCP-Server-Konfiguration (startet via `uv run`)
 
-# Tests
-pytest
-
-# Lint & Format
-ruff check --fix . && ruff format .
-```
-
-## MCP-Konfiguration für Claude Code
+## MCP-Konfiguration
 
 ```json
 {
@@ -49,5 +40,3 @@ ruff check --fix . && ruff format .
 - Posts/Pages werden standardmäßig als `draft` erstellt
 - Slugs werden automatisch generiert (inkl. Umlaut-Konvertierung)
 - Multi-Site-Support über `--site` Parameter
-
-@docs/api.md

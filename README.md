@@ -1,5 +1,7 @@
 # publii-mcp
 
+[![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/anthropics/claude-code)
+
 MCP Server für Publii CMS. Ermöglicht Claude Code und anderen MCP-Clients die Interaktion mit Publii-Websites.
 
 ## Voraussetzungen
@@ -91,6 +93,31 @@ pytest --cov
 # Code formatieren und linten
 ruff check --fix .
 ruff format .
+```
+
+## Claude Code Plugin
+
+Dieses Projekt ist als Claude Code Plugin verfügbar und kann direkt in Claude Code verwendet werden.
+
+### Installation als Plugin
+
+Das Plugin kann über ein Plugin-Marketplace-Repository oder direkt durch Clonen installiert werden:
+
+```bash
+# Repository clonen
+git clone https://github.com/USER/publii-mcp.git ~/.claude/plugins/publii-mcp
+
+# Oder über Claude Code Plugin-Marketplace (wenn verfügbar)
+```
+
+Nach der Installation steht der `publii` MCP-Server automatisch zur Verfügung.
+
+### Plugin-Struktur
+
+```
+.claude-plugin/
+└── plugin.json    # Plugin-Metadaten
+.mcp.json          # MCP-Server-Konfiguration
 ```
 
 ## Lizenz
