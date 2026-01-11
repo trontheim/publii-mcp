@@ -1,0 +1,6 @@
+{
+  "publii": {
+    "command": "uv",
+    "args": ["run", "publii-mcp", "serve"]
+  }
+}
