@@ -186,3 +186,54 @@ class TestPubliiDB:
         """get_post wirft Error fur nicht existierenden Post."""
         with pytest.raises(ValueError, match="Post mit ID 999 nicht gefunden"):
             db_with_posts.get_post(999)
+
+    def test_create_post_creates_new_post(self, db_with_posts) -> None:
+        """create_post erstellt neuen Post."""
+        result = db_with_posts.create_post(
+            title="Neuer Post",
+            content="<p>Neuer Inhalt</p>",
+        )
+
+        assert result["id"] == 4  # Nach den 3 Test-Posts
+        assert result["title"] == "Neuer Post"
+        assert result["status"] == "draft"
+        assert result["slug"] == "neuer-post"
+
+    def test_create_post_generates_slug(self, db_with_posts) -> None:
+        """create_post generiert Slug aus Titel."""
+        result = db_with_posts.create_post(
+            title="Mein Toller Artikel!",
+            content="<p>Test</p>",
+        )
+
+        assert result["slug"] == "mein-toller-artikel"
+
+    def test_create_post_validates_author(self, db_with_posts) -> None:
+        """create_post validiert Author-ID."""
+        with pytest.raises(ValueError, match="Author mit ID 999 nicht gefunden"):
+            db_with_posts.create_post(
+                title="Test",
+                content="<p>Test</p>",
+                author_id=999,
+            )
+
+    def test_create_post_creates_additional_data(self, db_with_posts) -> None:
+        """create_post erstellt posts_additional_data Eintrage."""
+        result = db_with_posts.create_post(
+            title="Test Post",
+            content="<p>Test</p>",
+        )
+
+        # Prufen ob _core und postViewSettings erstellt wurden
+        db_path = db_with_posts._get_db_path()
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT key FROM posts_additional_data WHERE post_id = ?",
+            (result["id"],)
+        )
+        keys = [row[0] for row in cursor.fetchall()]
+        conn.close()
+
+        assert "_core" in keys
+        assert "postViewSettings" in keys

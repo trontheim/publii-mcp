@@ -1,6 +1,10 @@
 """SQLite-Abstraktionsschicht fur Publii CMS."""
 
+import json
+import re
 import sqlite3
+import time
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -167,3 +171,166 @@ class PubliiDB:
         base["featured_image_id"] = row["featured_image_id"]
         base["template"] = row["template"]
         return base
+
+    @staticmethod
+    def _generate_slug(title: str) -> str:
+        """Generiert URL-freundlichen Slug aus Titel.
+
+        Umlaute werden konvertiert (a -> ae, etc.),
+        Sonderzeichen entfernt, Leerzeichen zu Bindestrichen.
+        """
+        # Umlaute konvertieren
+        umlaut_map = {
+            'ä': 'ae', 'ö': 'oe', 'ü': 'ue',
+            'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue',
+            'ß': 'ss',
+        }
+        slug = title
+        for umlaut, replacement in umlaut_map.items():
+            slug = slug.replace(umlaut, replacement)
+
+        # Auf ASCII normalisieren
+        slug = unicodedata.normalize('NFKD', slug)
+        slug = slug.encode('ascii', 'ignore').decode('ascii')
+
+        # Nur alphanumerisch und Leerzeichen behalten
+        slug = re.sub(r'[^\w\s-]', '', slug.lower())
+
+        # Leerzeichen zu Bindestrichen
+        slug = re.sub(r'[-\s]+', '-', slug).strip('-')
+
+        return slug
+
+    def validate_author_exists(self, author_id: int, site: str | None = None) -> bool:
+        """Pruft ob Author existiert."""
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM authors WHERE id = ?", (author_id,))
+        exists = cursor.fetchone() is not None
+        conn.close()
+        return exists
+
+    def _create_additional_data(
+        self,
+        post_id: int,
+        is_page: bool = False,
+        site: str | None = None,
+    ) -> None:
+        """Erstellt _core und postViewSettings/pageViewSettings Eintrage."""
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # _core Eintrag
+        core_data = {
+            "metaTitle": "",
+            "metaDesc": "",
+            "metaRobots": "index, follow",
+            "canonicalUrl": "",
+            "editor": "tinymce",
+            "mainTag": "",
+        }
+        cursor.execute(
+            "INSERT INTO posts_additional_data (post_id, key, value) VALUES (?, ?, ?)",
+            (post_id, "_core", json.dumps(core_data))
+        )
+
+        # View Settings
+        if is_page:
+            view_settings = {
+                "displayDate": {"type": "select"},
+                "displayAuthor": {"type": "select"},
+                "displayLastUpdatedDate": {"type": "select"},
+                "displayShareButtons": {"type": "select"},
+                "displayAuthorBio": {"type": "select"},
+                "displayChildPages": {"type": "select"},
+                "displayComments": {"type": "select"},
+            }
+            key = "pageViewSettings"
+        else:
+            view_settings = {
+                "displayDate": {"type": "select"},
+                "displayAuthor": {"type": "select"},
+                "displayLastUpdatedDate": {"type": "select"},
+                "displayTags": {"type": "select"},
+                "displayShareButtons": {"type": "select"},
+                "displayAuthorBio": {"type": "select"},
+                "displayPostNavigation": {"type": "select"},
+                "displayRelatedPosts": {"type": "select"},
+                "displayComments": {"type": "select"},
+            }
+            key = "postViewSettings"
+
+        cursor.execute(
+            "INSERT INTO posts_additional_data (post_id, key, value) VALUES (?, ?, ?)",
+            (post_id, key, json.dumps(view_settings))
+        )
+
+        conn.commit()
+        conn.close()
+
+    def create_post(
+        self,
+        title: str,
+        content: str,
+        site: str | None = None,
+        slug: str | None = None,
+        status: str = "draft",
+        author_id: int = 1,
+    ) -> dict:
+        """Erstellt einen neuen Blog-Post.
+
+        Args:
+            title: Post-Titel.
+            content: HTML-Inhalt.
+            site: Site-Name.
+            slug: URL-Slug (auto-generiert wenn None).
+            status: "draft" oder "published".
+            author_id: ID des Autors.
+
+        Returns:
+            Dict mit erstelltem Post.
+
+        Raises:
+            ValueError: Bei ungultigem author_id oder status.
+        """
+        # Validierung
+        if not self.validate_author_exists(author_id, site):
+            raise ValueError(f"Author mit ID {author_id} nicht gefunden")
+
+        if status not in ("draft", "published"):
+            raise ValueError(f"Ungultiger Status: {status}")
+
+        # Slug generieren
+        post_slug = slug or self._generate_slug(title)
+
+        # Timestamp in Millisekunden
+        now_ms = int(time.time() * 1000)
+
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO posts (title, authors, slug, text, status, created_at, modified_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (title, str(author_id), post_slug, content, status, now_ms, now_ms)
+        )
+        post_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Additional Data erstellen
+        self._create_additional_data(post_id, is_page=False, site=site)
+
+        return {
+            "id": post_id,
+            "title": title,
+            "slug": post_slug,
+            "status": status,
+            "author_id": author_id,
+            "created_at": self._ms_to_iso(now_ms),
+        }
