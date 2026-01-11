@@ -1,0 +1,30 @@
+[project]
+name = "publii-mcp"
+version = "1.0.0"
+description = "MCP Server fur Publii CMS"
+requires-python = ">=3.10"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Valgard" }
+]
+keywords = ["mcp", "publii", "cms", "sqlite"]
+dependencies = [
+    "fastmcp>=2,<3",
+    "typer>=0.12",
+    "rich>=13",
+]
+
+[project.scripts]
+publii-mcp = "publii_mcp.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.6"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=4",
+    "ruff>=0.8",
+]
