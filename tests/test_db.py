@@ -126,3 +126,49 @@ class TestPubliiDB:
 
         no_db_site = next(s for s in sites if s["name"] == "no-db-site")
         assert no_db_site["has_db"] is False
+
+    @pytest.fixture
+    def db_with_posts(self, temp_publii_dir: Path) -> "PubliiDB":
+        """PubliiDB mit Test-Posts."""
+        from publii_mcp.db import PubliiDB
+
+        db_path = temp_publii_dir / "sites" / "test-site" / "input" / "db.sqlite"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Test-Posts einfugen (Timestamp in Millisekunden!)
+        cursor.executescript('''
+            INSERT INTO posts (id, title, authors, slug, text, status, created_at, modified_at)
+            VALUES
+                (1, 'Erster Post', '1', 'erster-post', '<p>Inhalt 1</p>', 'published', 1704067200000, 1704067200000),
+                (2, 'Zweiter Post', '1', 'zweiter-post', '<p>Inhalt 2</p>', 'draft', 1704153600000, 1704153600000),
+                (3, 'Eine Seite', '1', 'eine-seite', '<p>Seite</p>', 'published,is-page', 1704240000000, 1704240000000);
+        ''')
+        conn.commit()
+        conn.close()
+
+        return PubliiDB(data_dir=temp_publii_dir, default_site="test-site")
+
+    def test_list_posts_returns_all_posts(self, db_with_posts) -> None:
+        """list_posts gibt alle Posts (keine Pages) zuruck."""
+        posts = db_with_posts.list_posts()
+
+        assert len(posts) == 2
+        assert posts[0]["title"] == "Zweiter Post"  # Neuester zuerst
+        assert posts[1]["title"] == "Erster Post"
+
+    def test_list_posts_filters_by_status(self, db_with_posts) -> None:
+        """list_posts filtert nach Status."""
+        published = db_with_posts.list_posts(status="published")
+        drafts = db_with_posts.list_posts(status="draft")
+
+        assert len(published) == 1
+        assert published[0]["title"] == "Erster Post"
+        assert len(drafts) == 1
+        assert drafts[0]["title"] == "Zweiter Post"
+
+    def test_list_posts_respects_limit(self, db_with_posts) -> None:
+        """list_posts beachtet Limit."""
+        posts = db_with_posts.list_posts(limit=1)
+
+        assert len(posts) == 1

@@ -1,5 +1,7 @@
 """SQLite-Abstraktionsschicht fur Publii CMS."""
 
+import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 
@@ -69,3 +71,61 @@ class PubliiDB:
                 })
 
         return sites
+
+    def list_posts(
+        self,
+        site: str | None = None,
+        status: str = "all",
+        limit: int = 20,
+    ) -> list[dict]:
+        """Listet Blog-Posts einer Site.
+
+        Args:
+            site: Site-Name. Nutzt default_site wenn None.
+            status: Filter: "all", "published", "draft".
+            limit: Maximale Anzahl Posts.
+
+        Returns:
+            Liste von Post-Dicts sortiert nach created_at (neueste zuerst).
+        """
+        db_path = self._get_db_path(site)
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Posts (keine Pages) - Pages haben ",is-page" im Status
+        query = "SELECT * FROM posts WHERE status NOT LIKE '%,is-page%'"
+        params: list = []
+
+        if status == "published":
+            query += " AND status = 'published'"
+        elif status == "draft":
+            query += " AND status = 'draft'"
+
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [self._row_to_post_dict(row) for row in rows]
+
+    def _row_to_post_dict(self, row: sqlite3.Row) -> dict:
+        """Konvertiert DB-Row zu Post-Dict."""
+        return {
+            "id": row["id"],
+            "title": row["title"],
+            "slug": row["slug"],
+            "status": row["status"],
+            "author_id": int(row["authors"]) if row["authors"] else None,
+            "created_at": self._ms_to_iso(row["created_at"]),
+            "modified_at": self._ms_to_iso(row["modified_at"]),
+        }
+
+    @staticmethod
+    def _ms_to_iso(ms: int | None) -> str | None:
+        """Konvertiert Millisekunden-Timestamp zu ISO-String."""
+        if ms is None:
+            return None
+        return datetime.fromtimestamp(ms / 1000).isoformat()
